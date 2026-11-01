@@ -1,0 +1,17 @@
+{
+  "name": "Mon Jardin",
+  "short_name": "Jardin",
+  "description": "Plan 2D, météo en direct et conseils d'arrosage et de plantation pour ton jardin.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08190f",
+  "theme_color": "#08190f",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
