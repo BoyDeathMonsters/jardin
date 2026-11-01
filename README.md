@@ -18,7 +18,7 @@ Tout reste sur le téléphone, dans le stockage local de l'app. Il n'y a ni comp
 Seules les coordonnées du jardin quittent le téléphone, pour interroger :
 
 - [Open-Meteo](https://open-meteo.com/) : prévisions, sol, 15 ans d'historique et recherche de commune ;
-- [SoilGrids](https://soilgrids.org/) : estimation du sol, seulement si tu touches le bouton dédié.
+- [SoilGrids](https://soilgrids.org/) (ISRIC) : estimation du sol, seulement si tu touches le bouton dédié. En ville, la carte est vide : l'app prend le point le plus proche et l'indique.
 
 ## Comment les conseils sont calculés
 

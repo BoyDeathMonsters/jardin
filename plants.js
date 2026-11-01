@@ -15,6 +15,10 @@
     poacees: { n: "Graminées", c: "#e8d97a", rot: 2 },
     lamiacees: { n: "Aromatiques", c: "#6fd6c8", rot: 0 },
     rosacees: { n: "Fruitiers et baies", c: "#ff9fb0", rot: 0 },
+    arbres: { n: "Arbres", c: "#7fc98f", rot: 0 },
+    arbustes: { n: "Arbustes et haies", c: "#e6a3d0", rot: 0 },
+    fleurs: { n: "Fleurs", c: "#f5b0c8", rot: 0 },
+    bulbes: { n: "Bulbes", c: "#c9b6ff", rot: 0 },
     autres: { n: "Autres", c: "#c8d6cf", rot: 0 },
   };
 
@@ -23,7 +27,13 @@
   const chouSoins = [[21, "Butte légèrement le pied et surveille les piérides sous les feuilles."], [45, "Pose un filet si tu vois des papillons blancs."]];
   const baieSoins = [[0, "Paille le pied pour garder la fraîcheur."]];
   const arbreSoins = [[0, "Arrose copieusement à la plantation, puis tuteure."], [365, "Taille de formation en fin d'hiver."]];
-  const arbre = { arbre: true, vivace: true, kc: [0.5, 1.05, 0.8], st: [30, 50, 120, 30], root: 1.5, p: 0.5, germ: 5, sun: "plein", besoin: "moyen", win: { plant: [[0, 16, "ff"], [-7, -3, "lf"]] } };
+  const arbre = { arbre: true, vivace: true, kc: [0.5, 1.05, 0.8], st: [30, 50, 120, 30], root: 1.5, p: 0.5, germ: 5, sun: "plein", besoin: "moyen", win: { plant: [[-3, 16, "ff"], [-7, -3, "lf"]] } };
+  const persistantWin = { plant: [[-6, 2, "ff"], [-5, 6, "lf"]] };
+  const grandArbre = { ...arbre, f: "arbres", cat: "arbre", rdt: 0, ph: [5.5, 7.5], d: [1825, 3650], dp: [1825, 3650], amis: [], ennemis: [], soins: arbreSoins };
+  const arbuste = { vivace: true, f: "arbustes", cat: "arbuste", kc: [0.4, 0.9, 0.6], st: [30, 40, 120, 40], root: 0.8, p: 0.5, germ: 5, sun: "mi", ph: [5.5, 7.5], besoin: "moyen", rdt: 0, esp: 1.2, rang: 1.2, d: [365, 730], dp: [90, 365], win: { plant: [[-3, 16, "ff"], [-7, 2, "lf"]] }, amis: [], ennemis: [], soins: [[0, "Arrose bien à la plantation et paille le pied."]] };
+  const vivaceFleur = { vivace: true, f: "fleurs", cat: "fleur", kc: [0.4, 0.85, 0.6], st: [25, 35, 90, 40], root: 0.4, p: 0.5, germ: 8, sun: "plein", ph: [6, 7.5], besoin: "faible", rdt: 0, esp: 0.4, rang: 0.4, d: [300, 400], dp: [60, 300], win: { plant: [[-3, 2, "ff"], [-4, 6, "lf"]] }, amis: [], ennemis: [], soins: [] };
+  const annuelle = { f: "fleurs", cat: "fleur", kc: [0.5, 0.9, 0.7], st: [15, 25, 60, 20], root: 0.3, p: 0.5, sun: "plein", ph: [6, 7.5], besoin: "faible", rdt: 0, esp: 0.3, rang: 0.3, amis: [], ennemis: [], soins: [] };
+  const bulbe = { vivace: true, f: "bulbes", cat: "fleur", kc: [0.4, 0.9, 0.5], st: [20, 30, 40, 30], root: 0.25, p: 0.5, germ: 4, sun: "plein", ph: [6, 7.5], besoin: "faible", rdt: 0, esp: 0.12, rang: 0.12, d: [150, 210], dp: [150, 210], eviter: ["humide"], win: { plant: [[-6, 3, "ff"]] }, amis: [], ennemis: [], soins: [] };
 
   const PLANTS = {
     tomate: { n: "Tomate", e: "🍅", f: "solanacees", cat: "legume", kc: [0.6, 1.15, 0.8], st: [30, 40, 40, 25], root: 0.8, p: 0.4, esp: 0.6, rang: 0.8, tmin: 2, germ: 14, gr: [10, 25], d: [100, 140], dp: [60, 85], sun: "plein", ph: [6, 7.2], besoin: "fort", rdt: 5, win: { abri: [[-8, -4, "lf"]], plant: [[3, 8, "lf"]] }, amis: ["basilic", "oeillet", "carotte", "persil", "capucine"], ennemis: ["pomme_de_terre", "fenouil", "chou"], soins: tomateSoins, mildiou: true },
@@ -87,11 +97,11 @@
     lavande: { n: "Lavande", e: "🪻", f: "lamiacees", cat: "fleur", vivace: true, kc: [0.3, 0.6, 0.5], st: [30, 40, 120, 30], root: 0.6, p: 0.65, esp: 0.8, rang: 0.8, tmin: -15, germ: 15, d: [365, 450], dp: [90, 150], sun: "plein", ph: [6.5, 8.5], besoin: "faible", rdt: 0, eviter: ["humide", "argile"], win: { plant: [[0, 7, "lf"]] }, amis: ["romarin", "thym"], ennemis: [], soins: [] },
 
     fraisier: { n: "Fraisier", e: "🍓", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 0.85, 0.75], st: [20, 30, 60, 30], root: 0.3, p: 0.2, esp: 0.3, rang: 0.45, tmin: -15, germ: 10, d: [270, 300], dp: [200, 280], sun: "plein", ph: [5.5, 6.8], besoin: "moyen", rdt: 1.5, eviter: ["calcaire"], win: { plant: [[-11, -6, "ff"], [-2, 2, "lf"]] }, amis: ["ail", "oignon", "poireau", "laitue", "epinard"], ennemis: ["chou", "chou_fleur", "brocoli"], soins: baieSoins },
-    framboisier: { n: "Framboisier", e: "🍇", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 1.05, 0.5], st: [30, 40, 90, 40], root: 0.5, p: 0.5, esp: 0.5, rang: 1.5, tmin: -25, germ: 5, d: [400, 480], dp: [400, 480], sun: "mi", ph: [5.5, 6.8], besoin: "moyen", rdt: 1, eviter: ["calcaire", "humide"], win: { plant: [[0, 16, "ff"], [-7, -3, "lf"]] }, amis: ["ail"], ennemis: ["pomme_de_terre"], soins: baieSoins },
-    groseillier: { n: "Groseillier", e: "🍇", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 1, 0.5], st: [30, 40, 90, 40], root: 0.6, p: 0.5, esp: 1.2, rang: 1.5, tmin: -25, germ: 5, d: [400, 800], dp: [400, 800], sun: "mi", ph: [6, 7], besoin: "moyen", rdt: 1, win: { plant: [[0, 16, "ff"], [-7, -3, "lf"]] }, amis: [], ennemis: [], soins: baieSoins },
-    cassissier: { n: "Cassissier", e: "🫐", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 1, 0.5], st: [30, 40, 90, 40], root: 0.6, p: 0.5, esp: 1.5, rang: 1.5, tmin: -25, germ: 5, d: [400, 800], dp: [400, 800], sun: "mi", ph: [6, 7], besoin: "moyen", rdt: 1, win: { plant: [[0, 16, "ff"], [-7, -3, "lf"]] }, amis: [], ennemis: [], soins: baieSoins },
-    myrtillier: { n: "Myrtillier", e: "🫐", f: "autres", cat: "fruit", vivace: true, kc: [0.3, 1.05, 0.65], st: [30, 40, 90, 40], root: 0.5, p: 0.5, esp: 1.2, rang: 1.5, tmin: -25, germ: 5, d: [730, 1100], dp: [730, 1100], sun: "mi", ph: [4.2, 5.5], besoin: "faible", rdt: 0.8, eviter: ["calcaire", "argile"], win: { plant: [[0, 16, "ff"], [-7, -3, "lf"]] }, amis: [], ennemis: [], soins: baieSoins, note: "Terre acide indispensable : terre de bruyère si ton sol ne l'est pas." },
-    vigne: { n: "Vigne", e: "🍇", f: "autres", cat: "fruit", vivace: true, arbre: true, kc: [0.3, 0.85, 0.45], st: [20, 40, 120, 60], root: 1.5, p: 0.5, esp: 1.5, rang: 2, tmin: -18, germ: 5, d: [1095, 1460], dp: [1095, 1460], sun: "plein", ph: [5.5, 8], besoin: "faible", rdt: 1.5, eviter: ["humide"], win: { plant: [[0, 16, "ff"], [-7, 2, "lf"]] }, amis: [], ennemis: [], soins: arbreSoins, oidium: true },
+    framboisier: { n: "Framboisier", e: "🍇", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 1.05, 0.5], st: [30, 40, 90, 40], root: 0.5, p: 0.5, esp: 0.5, rang: 1.5, tmin: -25, germ: 5, d: [400, 480], dp: [400, 480], sun: "mi", ph: [5.5, 6.8], besoin: "moyen", rdt: 1, eviter: ["calcaire", "humide"], win: { plant: [[-3, 16, "ff"], [-7, -3, "lf"]] }, amis: ["ail"], ennemis: ["pomme_de_terre"], soins: baieSoins },
+    groseillier: { n: "Groseillier", e: "🍇", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 1, 0.5], st: [30, 40, 90, 40], root: 0.6, p: 0.5, esp: 1.2, rang: 1.5, tmin: -25, germ: 5, d: [400, 800], dp: [400, 800], sun: "mi", ph: [6, 7], besoin: "moyen", rdt: 1, win: { plant: [[-3, 16, "ff"], [-7, -3, "lf"]] }, amis: [], ennemis: [], soins: baieSoins },
+    cassissier: { n: "Cassissier", e: "🫐", f: "rosacees", cat: "fruit", vivace: true, kc: [0.4, 1, 0.5], st: [30, 40, 90, 40], root: 0.6, p: 0.5, esp: 1.5, rang: 1.5, tmin: -25, germ: 5, d: [400, 800], dp: [400, 800], sun: "mi", ph: [6, 7], besoin: "moyen", rdt: 1, win: { plant: [[-3, 16, "ff"], [-7, -3, "lf"]] }, amis: [], ennemis: [], soins: baieSoins },
+    myrtillier: { n: "Myrtillier", e: "🫐", f: "autres", cat: "fruit", vivace: true, kc: [0.3, 1.05, 0.65], st: [30, 40, 90, 40], root: 0.5, p: 0.5, esp: 1.2, rang: 1.5, tmin: -25, germ: 5, d: [730, 1100], dp: [730, 1100], sun: "mi", ph: [4.2, 5.5], besoin: "faible", rdt: 0.8, eviter: ["calcaire", "argile"], win: { plant: [[-3, 16, "ff"], [-7, -3, "lf"]] }, amis: [], ennemis: [], soins: baieSoins, note: "Terre acide indispensable : terre de bruyère si ton sol ne l'est pas." },
+    vigne: { n: "Vigne", e: "🍇", f: "autres", cat: "fruit", vivace: true, arbre: true, kc: [0.3, 0.85, 0.45], st: [20, 40, 120, 60], root: 1.5, p: 0.5, esp: 1.5, rang: 2, tmin: -18, germ: 5, d: [1095, 1460], dp: [1095, 1460], sun: "plein", ph: [5.5, 8], besoin: "faible", rdt: 1.5, eviter: ["humide"], win: { plant: [[-3, 16, "ff"], [-7, 2, "lf"]] }, amis: [], ennemis: [], soins: arbreSoins, oidium: true },
     pommier: { ...arbre, n: "Pommier", e: "🍎", f: "rosacees", cat: "fruit", esp: 4, rang: 4, tmin: -28, d: [1095, 1825], dp: [1095, 1825], ph: [6, 7.5], rdt: 3, eviter: ["humide"], amis: ["capucine"], ennemis: [], soins: arbreSoins },
     poirier: { ...arbre, n: "Poirier", e: "🍐", f: "rosacees", cat: "fruit", esp: 4, rang: 4, tmin: -25, d: [1460, 2190], dp: [1460, 2190], ph: [6, 7.5], rdt: 2.5, amis: [], ennemis: [], soins: arbreSoins },
     cerisier: { ...arbre, n: "Cerisier", e: "🍒", f: "rosacees", cat: "fruit", esp: 6, rang: 6, tmin: -25, d: [1460, 2190], dp: [1460, 2190], ph: [6, 7.5], rdt: 1, eviter: ["humide"], amis: [], ennemis: [], soins: arbreSoins },
@@ -108,9 +118,88 @@
     phacelie: { n: "Phacélie (engrais vert)", e: "🪻", f: "autres", cat: "engrais", kc: [0.5, 0.9, 0.7], st: [10, 20, 30, 10], root: 0.4, p: 0.5, esp: 0.03, rang: 0.15, tmin: -5, germ: 6, gr: [5, 20], d: [45, 70], sun: "mi", ph: [5.5, 8], besoin: "faible", rdt: 0, win: { semis: [[0, 20, "lf"], [-14, -8, "ff"]] }, amis: [], ennemis: [], soins: [[50, "Fauche avant la montée en graines et laisse sur place."]] },
     moutarde: { n: "Moutarde (engrais vert)", e: "🌼", f: "brassicacees", cat: "engrais", kc: [0.5, 0.9, 0.7], st: [10, 20, 25, 10], root: 0.5, p: 0.5, esp: 0.03, rang: 0.15, tmin: -5, germ: 5, gr: [4, 20], d: [40, 60], sun: "mi", ph: [6, 8], besoin: "faible", rdt: 0, win: { semis: [[-14, -6, "ff"]] }, amis: [], ennemis: [], soins: [[45, "Fauche avant la floraison et laisse sur place."]], note: "Évite-la avant une culture de choux." },
     feve_engrais: { n: "Seigle (engrais vert)", e: "🌾", f: "poacees", cat: "engrais", kc: [0.4, 1, 0.5], st: [20, 40, 40, 10], root: 0.8, p: 0.5, esp: 0.02, rang: 0.15, tmin: -20, germ: 3, gr: [2, 18], d: [120, 180], sun: "mi", ph: [5, 7.5], besoin: "faible", rdt: 0, win: { semis: [[-8, 2, "ff"]] }, amis: [], ennemis: [], soins: [] },
+    gazon: { n: "Gazon", e: "🌱", f: "poacees", cat: "engrais", vivace: true, kc: [0.8, 0.95, 0.95], st: [15, 30, 180, 30], root: 0.2, p: 0.4, esp: 0.05, rang: 0.05, tmin: -25, germ: 10, gr: [5, 22], d: [15, 30], sun: "mi", ph: [5.5, 7.5], besoin: "moyen", rdt: 0, win: { semis: [[-3, 5, "lf"], [-10, -5, "ff"]] }, amis: [], ennemis: [], soins: [[21, "Première tonte quand l'herbe atteint 8 cm, sans couper trop court."]] },
+
+    topinambour: { n: "Topinambour", e: "🥔", f: "asteracees", cat: "legume", vivace: true, kc: [0.4, 1, 0.7], st: [25, 40, 80, 30], root: 0.8, p: 0.5, esp: 0.5, rang: 0.8, tmin: -20, germ: 6, d: [180, 220], dp: [180, 220], sun: "plein", ph: [5.5, 7.5], besoin: "faible", rdt: 3, win: { plant: [[-5, 1, "lf"]] }, amis: [], ennemis: [], soins: [], note: "Envahissant : réserve-lui un coin à part." },
+    endive: { n: "Chicorée, endive", e: "🥬", f: "asteracees", cat: "legume", kc: [0.7, 1, 0.95], st: [25, 35, 40, 15], root: 0.5, p: 0.4, esp: 0.15, rang: 0.3, tmin: -6, germ: 8, gr: [5, 18], d: [90, 130], sun: "plein", ph: [6, 7.5], besoin: "faible", rdt: 2.5, win: { semis: [[3, 10, "lf"]] }, amis: [], ennemis: [], soins: [] },
+
+    noisetier: { ...grandArbre, n: "Noisetier", e: "🌰", esp: 3.5, rang: 3.5, tmin: -25, sun: "mi", rdt: 0.6, d: [1095, 1825], dp: [1095, 1825], root: 1, note: "Plante deux variétés pour une bonne pollinisation." },
+    chataignier: { ...grandArbre, n: "Châtaignier", e: "🌰", esp: 10, rang: 10, tmin: -25, rdt: 0.5, ph: [4.5, 6.5], eviter: ["calcaire", "humide"], d: [1825, 3650], dp: [1825, 3650], note: "Grand arbre : il lui faut de la place et une terre acide." },
+    noyer: { ...grandArbre, n: "Noyer", e: "🌰", esp: 12, rang: 12, tmin: -25, rdt: 0.3, ph: [6, 8], eviter: ["humide"], d: [2555, 3650], dp: [2555, 3650], note: "Ses racines et ses feuilles gênent beaucoup de plantes à son pied." },
+    amandier: { ...grandArbre, n: "Amandier", e: "🌰", esp: 5, rang: 5, tmin: -15, rdt: 0.5, ph: [6.5, 8.5], eviter: ["humide"], d: [1095, 1825], dp: [1095, 1825], note: "Fleurit tôt : les gelées de printemps peuvent priver de récolte." },
+    cognassier: { ...grandArbre, n: "Cognassier", e: "🍐", cat: "fruit", f: "rosacees", esp: 4, rang: 4, tmin: -25, rdt: 2.5, ph: [5.5, 7.5], d: [1095, 1825], dp: [1095, 1825] },
+    neflier: { ...grandArbre, n: "Néflier", e: "🌳", cat: "fruit", f: "rosacees", esp: 4, rang: 4, tmin: -20, rdt: 1.5, d: [1095, 1825], dp: [1095, 1825] },
+    murier: { ...grandArbre, n: "Mûrier", e: "🫐", cat: "fruit", esp: 6, rang: 6, tmin: -20, rdt: 2, d: [1460, 2190], dp: [1460, 2190] },
+    olivier: { ...grandArbre, n: "Olivier", e: "🫒", cat: "fruit", esp: 6, rang: 6, tmin: -10, rdt: 1.5, ph: [6.5, 8.5], eviter: ["humide"], d: [1460, 2555], dp: [1460, 2555], win: { plant: [[-1, 8, "lf"]] } },
+    citronnier: { ...grandArbre, n: "Citronnier", e: "🍋", cat: "fruit", esp: 3, rang: 3, tmin: -4, rdt: 2, ph: [5.5, 7], eviter: ["humide", "calcaire"], d: [1095, 1825], dp: [1095, 1825], win: { plant: [[3, 10, "lf"]] }, note: "Hors climat doux, garde-le en pot et rentre-le l'hiver." },
+    kiwi: { ...grandArbre, n: "Kiwi", e: "🥝", cat: "fruit", esp: 4, rang: 4, root: 1, tmin: -15, rdt: 3, ph: [5.5, 6.8], eviter: ["calcaire", "humide"], d: [1460, 1825], dp: [1460, 1825], note: "Liane : il faut un pied mâle pour plusieurs femelles, sauf variété autofertile." },
+    mure: { ...arbuste, n: "Ronce à mûres", e: "🫐", cat: "fruit", f: "rosacees", esp: 2, rang: 2, tmin: -20, rdt: 1.5, d: [400, 800], dp: [400, 800] },
+
+    chene: { ...grandArbre, n: "Chêne", e: "🌳", esp: 15, rang: 15, tmin: -30 },
+    hetre: { ...grandArbre, n: "Hêtre", e: "🌳", esp: 12, rang: 12, tmin: -30, sun: "mi" },
+    charme: { ...grandArbre, n: "Charme", e: "🌳", esp: 8, rang: 8, tmin: -30, sun: "mi" },
+    erable: { ...grandArbre, n: "Érable", e: "🍁", esp: 8, rang: 8, tmin: -28, sun: "mi" },
+    bouleau: { ...grandArbre, n: "Bouleau", e: "🌳", esp: 6, rang: 6, tmin: -35, ph: [4.5, 7] },
+    tilleul: { ...grandArbre, n: "Tilleul", e: "🌳", esp: 10, rang: 10, tmin: -30 },
+    saule: { ...grandArbre, n: "Saule", e: "🌳", esp: 8, rang: 8, tmin: -30, p: 0.4, note: "Aime les sols frais : garde-le loin des canalisations." },
+    magnolia: { ...grandArbre, n: "Magnolia", e: "🌸", esp: 5, rang: 5, tmin: -20, ph: [5, 6.8], eviter: ["calcaire"], win: persistantWin },
+    cerisier_fleurs: { ...grandArbre, n: "Cerisier du Japon", e: "🌸", esp: 5, rang: 5, tmin: -25 },
+    mimosa: { ...grandArbre, n: "Mimosa", e: "🌼", esp: 5, rang: 5, tmin: -8, ph: [4.5, 6.5], eviter: ["calcaire"], win: { plant: [[-1, 8, "lf"]] } },
+    pin: { ...grandArbre, n: "Pin", e: "🌲", esp: 6, rang: 6, tmin: -30, ph: [4.5, 7.5], win: persistantWin },
+    sapin: { ...grandArbre, n: "Sapin", e: "🌲", esp: 5, rang: 5, tmin: -30, ph: [5, 7], win: persistantWin },
+    cedre: { ...grandArbre, n: "Cèdre", e: "🌲", esp: 12, rang: 12, tmin: -20, win: persistantWin },
+
+    rosier: { ...arbuste, n: "Rosier", e: "🌹", esp: 0.8, rang: 0.8, tmin: -20, sun: "plein", ph: [6, 7.2], besoin: "fort", eviter: ["humide"], dp: [60, 120], oidium: true, soins: [[0, "Enterre le point de greffe au ras du sol et arrose copieusement."], [300, "Taille en fin d'hiver, au-dessus d'un œil tourné vers l'extérieur."]] },
+    rosier_grimpant: { ...arbuste, n: "Rosier grimpant", e: "🌹", esp: 2, rang: 1, tmin: -20, sun: "plein", ph: [6, 7.2], besoin: "fort", eviter: ["humide"], dp: [90, 365], oidium: true, soins: [[30, "Palisse les tiges à l'horizontale pour plus de fleurs."]] },
+    hortensia: { ...arbuste, n: "Hortensia", e: "🌸", esp: 1.2, rang: 1.2, tmin: -15, sun: "mi", ph: [5, 7], besoin: "moyen", kc: [0.5, 1.05, 0.8], p: 0.35, note: "Gourmand en eau. En sol acide, certaines variétés fleurissent bleu." },
+    lilas: { ...arbuste, n: "Lilas", e: "🪻", esp: 2, rang: 2, tmin: -30, sun: "plein", ph: [6.5, 8], eviter: ["humide"] },
+    forsythia: { ...arbuste, n: "Forsythia", e: "🌼", esp: 1.5, rang: 1.5, tmin: -25, sun: "mi" },
+    camelia: { ...arbuste, n: "Camélia", e: "🌺", esp: 1.5, rang: 1.5, tmin: -15, sun: "mi", ph: [4.5, 6.2], eviter: ["calcaire"], win: persistantWin },
+    rhododendron: { ...arbuste, n: "Rhododendron", e: "🌺", esp: 1.5, rang: 1.5, tmin: -20, sun: "mi", ph: [4.5, 6], eviter: ["calcaire", "humide"], win: persistantWin, note: "Terre acide indispensable : terre de bruyère si ton sol ne l'est pas." },
+    azalee: { ...arbuste, n: "Azalée", e: "🌺", esp: 1, rang: 1, tmin: -15, sun: "mi", ph: [4.5, 6], eviter: ["calcaire", "humide"], win: persistantWin },
+    buddleia: { ...arbuste, n: "Arbre à papillons", e: "🦋", esp: 2, rang: 2, tmin: -20, sun: "plein", ph: [6, 8], besoin: "faible" },
+    seringat: { ...arbuste, n: "Seringat", e: "🌸", esp: 1.5, rang: 1.5, tmin: -25, sun: "mi" },
+    spiree: { ...arbuste, n: "Spirée", e: "🌸", esp: 1, rang: 1, tmin: -25, sun: "mi" },
+    laurier_rose: { ...arbuste, n: "Laurier-rose", e: "🌺", esp: 1.5, rang: 1.5, tmin: -8, sun: "plein", ph: [6, 8], besoin: "faible", win: { plant: [[0, 8, "lf"]] }, note: "Toxique pour les humains et les animaux." },
+    buis: { ...arbuste, n: "Buis", e: "🌿", esp: 0.4, rang: 0.4, tmin: -20, sun: "mi", ph: [6.5, 8], win: persistantWin, note: "Surveille la pyrale, sa chenille peut le défolier." },
+    laurier_cerise: { ...arbuste, n: "Laurier-cerise (haie)", e: "🌿", esp: 1, rang: 1, tmin: -20, sun: "mi", win: persistantWin },
+    photinia: { ...arbuste, n: "Photinia (haie)", e: "🌿", esp: 1, rang: 1, tmin: -15, sun: "plein", win: persistantWin },
+    troene: { ...arbuste, n: "Troène (haie)", e: "🌿", esp: 0.6, rang: 0.6, tmin: -25, sun: "mi" },
+    thuya: { ...arbuste, n: "Thuya (haie)", e: "🌲", esp: 0.8, rang: 0.8, tmin: -30, sun: "plein", win: persistantWin },
+    bambou: { ...arbuste, n: "Bambou", e: "🎋", esp: 1.5, rang: 1.5, tmin: -18, sun: "mi", kc: [0.6, 1, 0.9], win: { plant: [[-2, 16, "lf"]] }, note: "Pose une barrière anti-rhizomes pour les variétés traçantes." },
+    glycine: { ...arbuste, n: "Glycine", e: "🪻", esp: 3, rang: 1, tmin: -25, sun: "plein", ph: [5.5, 7], note: "Grimpante très vigoureuse : il lui faut un support solide." },
+    clematite: { ...arbuste, n: "Clématite", e: "🌸", esp: 1.5, rang: 0.8, tmin: -25, sun: "mi", ph: [6.5, 8], soins: [[0, "Garde le pied à l'ombre et la tête au soleil."]] },
+    chevrefeuille: { ...arbuste, n: "Chèvrefeuille", e: "🌼", esp: 1.5, rang: 0.8, tmin: -25, sun: "mi" },
+    lierre: { ...arbuste, n: "Lierre", e: "🍃", esp: 1, rang: 0.5, tmin: -25, sun: "ombre", win: persistantWin },
+
+    pivoine: { ...vivaceFleur, n: "Pivoine", e: "🌸", esp: 0.8, rang: 0.8, tmin: -30, besoin: "moyen", eviter: ["humide"], note: "Ne l'enterre pas trop : les bourgeons à 3 cm sous la surface." },
+    iris: { ...vivaceFleur, n: "Iris", e: "🪻", esp: 0.3, rang: 0.3, tmin: -25, eviter: ["humide"], win: { plant: [[-11, -6, "ff"], [-2, 4, "lf"]] } },
+    geranium_vivace: { ...vivaceFleur, n: "Géranium vivace", e: "🌸", tmin: -25, sun: "mi" },
+    hemerocalle: { ...vivaceFleur, n: "Hémérocalle", e: "🌺", esp: 0.5, rang: 0.5, tmin: -30, sun: "mi" },
+    hosta: { ...vivaceFleur, n: "Hosta", e: "🍃", esp: 0.6, rang: 0.6, tmin: -30, sun: "ombre", ph: [5.5, 7.5], besoin: "moyen", p: 0.35, note: "Les limaces en raffolent." },
+    fougere: { ...vivaceFleur, n: "Fougère", e: "🌿", esp: 0.6, rang: 0.6, tmin: -25, sun: "ombre", ph: [5, 7], p: 0.35 },
+    sedum: { ...vivaceFleur, n: "Sedum", e: "🌸", tmin: -30, kc: [0.3, 0.5, 0.4], p: 0.7, ph: [6, 8], eviter: ["humide"] },
+    rudbeckia: { ...vivaceFleur, n: "Rudbeckia", e: "🌼", tmin: -30 },
+    echinacee: { ...vivaceFleur, n: "Échinacée", e: "🌸", tmin: -30 },
+    muguet: { ...vivaceFleur, n: "Muguet", e: "🌼", esp: 0.15, rang: 0.15, tmin: -30, sun: "ombre", ph: [5, 7], win: { plant: [[-4, 3, "ff"]] } },
+    primevere: { ...vivaceFleur, n: "Primevère", e: "🌼", esp: 0.2, rang: 0.2, tmin: -20, sun: "mi", win: { plant: [[-6, 3, "ff"], [-8, 0, "lf"]] } },
+
+    tulipe: { ...bulbe, n: "Tulipe", e: "🌷", tmin: -25 },
+    jonquille: { ...bulbe, n: "Jonquille", e: "🌼", tmin: -25, sun: "mi" },
+    crocus: { ...bulbe, n: "Crocus", e: "🪻", esp: 0.08, rang: 0.08, tmin: -25, sun: "mi", win: { plant: [[-8, 0, "ff"]] } },
+    jacinthe: { ...bulbe, n: "Jacinthe", e: "🪻", tmin: -20 },
+    lys: { ...bulbe, n: "Lys", e: "🌺", esp: 0.25, rang: 0.25, tmin: -25, win: { plant: [[-4, 3, "ff"], [-6, 0, "lf"]] } },
+    dahlia: { ...bulbe, vivace: false, n: "Dahlia", e: "🌺", esp: 0.6, rang: 0.6, tmin: 0, germ: 12, gr: [8, 24], d: [80, 110], dp: [80, 110], besoin: "moyen", win: { plant: [[1, 6, "lf"]] }, note: "Rentre les tubercules à l'abri du gel après la floraison." },
+    glaieul: { ...bulbe, vivace: false, n: "Glaïeul", e: "🌺", esp: 0.15, rang: 0.25, tmin: 0, germ: 10, gr: [8, 24], d: [85, 110], dp: [85, 110], win: { plant: [[-1, 8, "lf"]] } },
+
+    cosmos: { ...annuelle, n: "Cosmos", e: "🌸", esp: 0.35, rang: 0.35, tmin: 1, germ: 12, gr: [10, 25], d: [60, 90], win: { semis: [[2, 8, "lf"]] } },
+    zinnia: { ...annuelle, n: "Zinnia", e: "🌺", tmin: 2, germ: 15, gr: [12, 27], d: [60, 85], dp: [35, 60], win: { abri: [[-4, 0, "lf"]], semis: [[3, 8, "lf"]], plant: [[3, 9, "lf"]] } },
+    petunia: { ...annuelle, n: "Pétunia", e: "🌸", tmin: 2, germ: 18, gr: [10, 25], d: [80, 110], dp: [20, 40], win: { abri: [[-10, -6, "lf"]], plant: [[3, 9, "lf"]] } },
+    pensee: { ...annuelle, n: "Pensée", e: "🌸", esp: 0.2, rang: 0.2, tmin: -12, germ: 7, germMax: 22, sun: "mi", gr: [4, 16], d: [90, 150], dp: [20, 45], win: { plant: [[-7, 0, "ff"], [-8, -1, "lf"]] } },
+    pelargonium: { ...annuelle, n: "Géranium de balcon", e: "🌺", tmin: 2, germ: 15, gr: [10, 25], d: [100, 140], dp: [20, 40], win: { plant: [[3, 9, "lf"]] }, note: "Le pélargonium se rentre à l'abri pour l'hiver." },
   };
 
-  const CATS = { legume: "Légumes", aromate: "Aromatiques", fruit: "Fruits", fleur: "Fleurs", engrais: "Engrais verts" };
+  const CATS = { legume: "Légumes", aromate: "Aromatiques", fruit: "Fruits", arbre: "Arbres", arbuste: "Arbustes, haies", fleur: "Fleurs", engrais: "Engrais verts, gazon" };
   const api = { PLANTS, FAM, CATS };
   root.Plants = api;
   if (typeof module !== "undefined") module.exports = api;

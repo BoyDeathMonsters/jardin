@@ -15,7 +15,7 @@
   };
 
   const $ = (id) => document.getElementById(id);
-  const main = $("main"), sheet = $("sheet");
+  const main = $("main"), sheet = $("sheet"), toastEl = $("toast");
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -57,9 +57,16 @@
 
   let toastTimer;
   function toast(msg, bad) {
-    const t = $("toast");
+    const t = toastEl;
     t.textContent = msg; t.className = "glass" + (bad ? " bad" : ""); t.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 4200);
+    // Une fenêtre ouverte passe devant tout le reste de la page : le message doit s'afficher au-dessus d'elle.
+    if (t.showPopover) { if (t.matches(":popover-open")) t.hidePopover(); t.showPopover(); }
+    else if (sheet.open) sheet.appendChild(t);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      if (t.showPopover && t.matches(":popover-open")) t.hidePopover();
+      t.hidden = true;
+    }, 4200);
   }
 
   /* ---------- Services ---------- */
@@ -125,18 +132,31 @@
   }
 
   // Estimation mondiale à 250 m : pratique pour démarrer, moins fiable qu'un test à la main.
+  async function soilValue(property, point) {
+    let last;
+    for (let i = 0; i < 2; i++) {
+      try {
+        const res = await fetch(E.soilMapURL(property, point));
+        if (res.ok) return E.soilMapMean(await res.text());
+        last = new Error("HTTP " + res.status);
+      } catch (e) { last = e; }
+    }
+    throw last;
+  }
+
   async function fetchSoil() {
     const g = S.garden;
-    const url = `https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${g.lon}&lat=${g.lat}&property=clay&property=sand&property=phh2o&property=soc&depth=0-5cm&depth=5-15cm&depth=15-30cm&value=mean`;
-    const json = await getJSON(url, 2);
-    const avg = (name) => {
-      const layer = json.properties.layers.find((l) => l.name === name);
-      const vals = layer ? layer.depths.map((d) => d.values.mean).filter((v) => v != null) : [];
-      return vals.length ? E.mean(vals) / layer.unit_measure.d_factor : null;
-    };
-    const clay = avg("clay"), sand = avg("sand"), ph = avg("phh2o"), soc = avg("soc");
-    if (clay == null || sand == null) throw new Error("Pas de données ici");
-    return { clay, sand, ph, soc };
+    for (const ring of E.soilProbeRings(g.lat, g.lon)) {
+      const found = await Promise.allSettled(ring.points.map((p) => soilValue("clay", p)));
+      if (found.every((r) => r.status === "rejected")) throw new Error("service");
+      const i = found.findIndex((r) => r.status === "fulfilled" && r.value != null);
+      if (i < 0) continue;
+      const point = ring.points[i];
+      const [sand, ph, soc] = await Promise.all(["sand", "phh2o", "soc"].map((p) => soilValue(p, point)));
+      if (sand == null) continue;
+      return { clay: found[i].value / 10, sand: sand / 10, ph: ph == null ? null : ph / 10, soc: soc == null ? null : soc / 10, km: ring.km };
+    }
+    throw new Error("vide");
   }
 
   /* ---------- Rendu général ---------- */
@@ -210,7 +230,7 @@
       <p class="muted">Humidifie une poignée de terre et roule-la en boudin : c'est le test le plus fiable.</p>
       <div class="field"><label for="f-texture">Type de terre</label><select id="f-texture" data-set="soil.texture">${opts(E.SOILS, s.texture)}</select></div>
       <button class="soft" type="button" data-act="soilAuto">🛰️ Estimer depuis les cartes de sol</button>
-      <div id="soilAutoMsg" class="hint">${a ? `Estimation : ${num(a.clay, 0)} % d'argile, ${num(a.sand, 0)} % de sable${a.ph ? `, pH ${num(a.ph)}` : ""}.` : ""}</div>
+      <div id="soilAutoMsg" class="hint" role="status">${a ? `Estimation : ${num(a.clay, 0)} % d'argile, ${num(a.sand, 0)} % de sable${a.ph ? `, pH ${num(a.ph)}` : ""}${a.km ? `. Ton adresse est en zone urbaine sur la carte : valeurs relevées à environ ${a.km} km, à confirmer par le test du boudin` : ""}.` : ""}</div>
       <div class="two">
         <div class="field"><label for="f-ph">pH, si tu le connais</label><input id="f-ph" type="number" inputmode="decimal" step="0.1" min="3.5" max="9.5" placeholder="Inconnu" data-set="soil.ph" data-type="num" value="${s.ph ?? ""}"></div>
         <div class="field"><label for="f-humus">Matière organique</label><select id="f-humus" data-set="soil.humus">${opts(E.HUMUS, s.humus)}</select></div>
@@ -236,7 +256,7 @@
     const g = S.garden, d = g.dims, kind = g.shapeKind;
     const area = E.polygonArea(g.shape);
     const dims = kind === "free"
-      ? '<p class="hint">Glisse les points blancs. Touche un petit point sur un côté pour ajouter un angle.</p>'
+      ? '<p class="hint">Glisse les points blancs. Touche un petit point sur un côté pour ajouter un angle. Un côté passe au vert quand il est bien droit.</p>'
       : `<div class="two">
           <div class="field"><label for="d-w">Largeur (m)</label><input id="d-w" type="number" inputmode="decimal" min="1" step="0.5" data-dim="w" value="${d.w}"></div>
           <div class="field"><label for="d-h">Longueur (m)</label><input id="d-h" type="number" inputmode="decimal" min="1" step="0.5" data-dim="h" value="${d.h}"></div>
@@ -406,7 +426,7 @@
   }
 
   function selPanel(item) {
-    if (shapeMode) return '<p class="muted small">Glisse les points blancs pour dessiner ton terrain. Touche un petit point sur un côté pour ajouter un angle, ou touche longtemps un angle pour le retirer.</p>';
+    if (shapeMode) return '<p class="muted small">Glisse les points blancs pour dessiner ton terrain. Touche un petit point sur un côté pour ajouter un angle, ou touche longtemps un angle pour le retirer. Un côté passe au vert quand il est parfaitement horizontal ou vertical.</p>';
     if (!item) return '<p class="muted small">Touche une culture pour la voir. Glisse pour la déplacer, tire le rond pour la redimensionner. Deux doigts pour zoomer.</p>';
     if (selected.kind === "z") {
       const z = ZONES[item.type];
@@ -491,11 +511,18 @@
         <circle data-v="${i}" cx="${p[0] * 100}" cy="${p[1] * 100}" r="${11 * px}" fill="#fff" stroke="#0b2316" stroke-width="${2 * px}"/>`;
     }).join("") : "";
 
+    // En dessinant, un côté passe au vert dès qu'il est parfaitement horizontal ou vertical.
+    const straight = editing ? pts.map((p, i) => {
+      const q = pts[(i + 1) % pts.length];
+      if (p[0] !== q[0] && p[1] !== q[1]) return "";
+      return `<line data-straight="1" x1="${p[0] * 100}" y1="${p[1] * 100}" x2="${q[0] * 100}" y2="${q[1] * 100}" stroke="var(--ok)" stroke-width="${4.5 * px}" stroke-linecap="round"/>`;
+    }).join("") : "";
+
     svg.innerHTML = `<defs><clipPath id="terrain"><polygon points="${polyStr}"/></clipPath></defs>
       <polygon points="${polyStr}" fill="rgba(120,180,110,.22)"/>
       <g clip-path="url(#terrain)" stroke="rgba(255,255,255,.14)" stroke-width="${px}">${grid}</g>
       <polygon points="${polyStr}" fill="none" stroke="#fff" stroke-width="${2.2 * px}" stroke-linejoin="round"/>
-      ${zones}${items}${sides}${handle}${verts}`;
+      ${straight}${zones}${items}${sides}${handle}${verts}`;
     const sc = $("planScale");
     if (sc) sc.textContent = `Grille : ${gridStep} m`;
   }
@@ -527,6 +554,7 @@
   let gesture = null, longPress = null;
   const pointers = new Map();
   const snap = (v) => Math.round(v * 10) / 10;
+  const MAGNET_PX = 10;
 
   function toPlan(e) {
     const svg = $("plan"), m = svg.getScreenCTM().inverse();
@@ -621,7 +649,9 @@
       it.w = Math.max(0.2, snap(gesture.orig.w + dx));
       it.h = Math.max(0.2, snap(gesture.orig.h + dy));
     } else if (gesture.type === "vertex") {
-      S.garden.shape[gesture.i] = [snap(gesture.orig[0] + dx), snap(gesture.orig[1] + dy)];
+      const svg = $("plan"), r = svg.getBoundingClientRect();
+      const reach = Math.max(view.w / r.width, view.h / r.height) * MAGNET_PX / 100;
+      S.garden.shape[gesture.i] = alignVertex(S.garden.shape, gesture.i, snap(gesture.orig[0] + dx), snap(gesture.orig[1] + dy), reach);
       S.garden.shapeKind = "free";
       updateAreaLabel();
     }
@@ -647,6 +677,18 @@
     }
     if (g.type === "vertex") { afterShapeEdit(); return; }
     if (g.type !== "pan") { save(); drawPlan(); refreshSel(); }
+  }
+
+  // Aimante un angle sur ses deux voisins pour obtenir facilement des côtés bien droits.
+  function alignVertex(shape, i, x, y, reach) {
+    const n = shape.length, prev = shape[(i - 1 + n) % n], next = shape[(i + 1) % n];
+    const near = (v, a, b) => {
+      const da = Math.abs(v - a), db = Math.abs(v - b);
+      return Math.min(da, db) > reach ? v : da <= db ? a : b;
+    };
+    const ax = near(x, prev[0], next[0]), ay = near(y, prev[1], next[1]);
+    const merged = (ax === prev[0] && ay === prev[1]) || (ax === next[0] && ay === next[1]);
+    return merged ? [x, y] : [ax, ay];
   }
 
   function afterShapeEdit() {
@@ -730,7 +772,7 @@
           <div class="tiles" style="margin-top:0">
             <div class="tile"><b>${Math.round(wb.reserve * 100)} %</b><span>réserve d'eau</span></div>
             <div class="tile"><b>${wb.needs ? wb.litres + " L" : wb.nextIn == null ? "14 j +" : wb.nextIn + " j"}</b><span>${wb.needs ? "à donner" : "avant arrosage"}</span></div>
-            <div class="tile"><b style="font-size:14px;line-height:1.5">${esc(wb.stage)}</b><span>stade</span></div>
+            <div class="tile"><b style="font-size:13px;line-height:1.6;overflow-wrap:normal">${esc(wb.stage)}</b><span>stade</span></div>
           </div>
           ${reserveChart(wb, today)}
           <p class="muted small">Calcul : ${num(wb.today.et)} mm consommés aujourd'hui, racines à ${Math.round(wb.today.taw / E.soilReserve(S.garden.soil).taw * 100)} cm, réserve totale ${num(wb.today.taw, 0)} mm${wb.covered ? ", sous abri : la pluie ne compte pas" : ""}.</p>
@@ -747,7 +789,7 @@
       <details><summary>Réglages de cette culture</summary><div class="stack" style="margin-top:10px">
         <div class="two">
           <div class="field"><label for="c-var">Variété</label><input id="c-var" data-cset="variety" value="${esc(p.variety || "")}" placeholder="Cœur de bœuf"></div>
-          <div class="field"><label for="c-date">Date</label><input id="c-date" type="date" data-cset="date" value="${p.date}"></div>
+          <div class="field full"><label for="c-date">Date</label><input id="c-date" type="date" data-cset="date" value="${p.date}"></div>
           <div class="field"><label for="c-count">Nombre de plants</label><input id="c-count" type="number" inputmode="numeric" min="1" data-cset="count" data-type="num" value="${p.count}"></div>
           <div class="field"><label for="c-irr">Arrosage</label><select id="c-irr" data-cset="irrigation">${opts(E.IRRIG, p.irrigation)}</select></div>
           <div class="field"><label for="c-sun">Soleil ici</label><select id="c-sun" data-cset="sun">${opts(E.SUN, p.sun || S.garden.sun)}</select></div>
@@ -848,10 +890,8 @@
     sheet.dataset.culture = "";
     sheet.innerHTML = `<div class="sheet">
       <div class="sheet-head"><h2>${plant.e} ${esc(plant.n)}</h2><button class="close" type="button" data-act="closeSheet" aria-label="Fermer">✕</button></div>
-      <div class="two">
-        <div class="field"><label for="a-date">Date</label><input id="a-date" type="date" data-aset="date" value="${a.date}"></div>
-        <div class="field"><label for="a-count">Plants</label><input id="a-count" type="number" inputmode="numeric" min="1" data-aset="count" data-type="num" value="${a.count}"></div>
-      </div>
+      <div class="field"><label for="a-date">Date</label><input id="a-date" type="date" data-aset="date" value="${a.date}"></div>
+      <div class="field"><label for="a-count">Nombre de plants</label><input id="a-count" type="number" inputmode="numeric" min="1" data-aset="count" data-type="num" value="${a.count}"></div>
       <div class="chips" role="group" aria-label="Méthode">${Object.keys(plant.win || {}).map((m) => `<button class="chip" type="button" data-act="advMethod" data-v="${m}" aria-pressed="${a.method === m}">${esc(E.METHODS[m])}</button>`).join("")}</div>
       ${a.method !== "abri" ? `<label class="check"><input type="checkbox" data-aset="covered" data-type="bool"${a.covered ? " checked" : ""}> Sous serre ou tunnel</label>` : ""}
       <div class="verdict ${res.verdict}" role="status"><h3>${head}</h3><ul class="small" style="margin:6px 0 0;padding-left:18px">${others}</ul></div>
@@ -968,6 +1008,13 @@
     save();
   };
 
+  function wateredMessage(id, litres) {
+    const p = S.plantings.find((x) => x.id === id);
+    const wb = ready() && p ? E.waterBalance(p, S.garden, S.weather, S.clim, todayISO()) : null;
+    const reserve = wb ? ` Réserve du sol : ${Math.round(wb.reserve * 100)} %.` : "";
+    return `💧 ${num(litres)} L ${litres >= 2 ? "notés" : "noté"} pour ${p ? E.plantOf(p).n.toLowerCase() : "cette culture"}.${reserve}`;
+  }
+
   const actions = {
     refresh: () => refreshWeather(true),
     setupBack: () => { setupStep--; setupError = ""; view = null; render(); },
@@ -993,7 +1040,9 @@
         if (a.soc != null) s.humus = a.soc < 10 ? "faible" : a.soc > 25 ? "riche" : "moyen";
         save(); render();
       } catch (e) {
-        if (msg) msg.textContent = "Cartes de sol indisponibles ici ou pour le moment. Choisis avec le test du boudin.";
+        const text = e.message === "vide" ? "Pas de données de sol autour de ton jardin. Choisis avec le test du boudin." : "Cartes de sol injoignables pour le moment. Réessaie plus tard, ou choisis avec le test du boudin.";
+        const box = $("soilAutoMsg");
+        if (box) box.textContent = text;
       }
     },
     shapeKind: (d) => {
@@ -1030,18 +1079,18 @@
     },
     removeZone: (d) => { S.garden.zones = S.garden.zones.filter((z) => z.id !== d.id); selected = null; save(); render(); },
     openCulture: (d) => cultureSheet(d.id),
-    waterDone: (d) => { logWater(d.id, +d.l); toast(`Arrosage de ${d.l} L noté.`); render(); },
+    waterDone: (d) => { logWater(d.id, +d.l); toast(wateredMessage(d.id, +d.l)); render(); },
     waterCustom: (d) => {
-      const v = parseFloat($("waterL").value);
+      const v = parseFloat(String($("waterL").value).replace(",", "."));
       if (!(v > 0)) return toast("Indique un nombre de litres.", true);
-      logWater(d.id, v); toast(`Arrosage de ${num(v)} L noté.`); cultureSheet(d.id); render();
+      logWater(d.id, v); cultureSheet(d.id); render(); toast(wateredMessage(d.id, v));
     },
     harvest: (d) => {
       const v = parseFloat($("harvestKg").value), p = S.plantings.find((x) => x.id === d.id);
       if (!(v > 0) || !p) return toast("Indique un poids en kilos.", true);
       p.harvests = p.harvests || [];
       p.harvests.push({ date: todayISO(), kg: v });
-      save(); toast(`${num(v)} kg notés, bravo !`); cultureSheet(d.id); render();
+      save(); cultureSheet(d.id); render(); toast(`🧺 ${num(v)} kg de ${E.plantOf(p).n.toLowerCase()} notés, bravo !`);
     },
     transplant: (d) => {
       const p = S.plantings.find((x) => x.id === d.id), plant = E.plantOf(p);

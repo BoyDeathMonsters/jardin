@@ -58,6 +58,33 @@
     return "limon";
   }
 
+  // Les cartes de sol n'ont pas de données en ville : on cherche alors le point le plus proche, en cercles de plus en plus larges.
+  function soilProbeRings(lat, lon) {
+    const kmLat = 1 / 111, kmLon = 1 / (111 * Math.max(0.2, Math.cos(lat * Math.PI / 180)));
+    const rings = [{ km: 0, points: [{ lat, lon }] }];
+    for (const km of [2, 4, 7, 10, 15, 20, 30, 45]) {
+      const points = [];
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        points.push({ lat: +(lat + km * kmLat * Math.sin(a)).toFixed(5), lon: +(lon + km * kmLon * Math.cos(a)).toFixed(5) });
+      }
+      rings.push({ km, points });
+    }
+    return rings;
+  }
+
+  function soilMapURL(property, { lat, lon }) {
+    const d = 0.002, layers = ["0-5cm", "5-15cm", "15-30cm"].map((depth) => `${property}_${depth}_mean`).join(",");
+    return `https://maps.isric.org/mapserv?map=/map/${property}.map&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo&LAYERS=${layers}&QUERY_LAYERS=${layers}&STYLES=`
+      + `&SRS=EPSG:4326&BBOX=${(lon - d).toFixed(5)},${(lat - d).toFixed(5)},${(lon + d).toFixed(5)},${(lat + d).toFixed(5)}&WIDTH=3&HEIGHT=3&X=1&Y=1&FEATURE_COUNT=3&INFO_FORMAT=application/geo%2Bjson`;
+  }
+
+  // Le serveur colle une réponse par couche, ce qui n'est pas du JSON valide : on lit donc directement les valeurs.
+  function soilMapMean(text) {
+    const values = [...String(text).matchAll(/"pixel_value"\s*:\s*(-?\d+(?:\.\d+)?)/g)].map((m) => +m[1]).filter((v) => v > 0);
+    return mean(values);
+  }
+
   /* ---------- Climat ---------- */
 
   const MILD_TEMP = 9.5;
@@ -483,15 +510,17 @@
       if (!covered && wet >= (heavy ? 15 : 30)) add("warn", "Sol détrempé", `${wet.toFixed(0)} mm tombés ces 3 derniers jours : attends que la terre s'émiette.`);
 
       // Temps restant avant le gel pour les plantes gélives.
+      const isFlower = plant.rdt === 0 && plant.cat === "fleur";
+      const event = isFlower ? "floraison" : "récolte";
       if (plant.tmin >= -1 && !plant.vivace && !clim.frostFree) {
         const est = harvestEstimate({ plant: plantKey, method, date }, weather, clim);
         const fall = frostDates(clim, yearOf(date), garden, covered).ffMed;
         const f = fall < date ? frostDates(clim, yearOf(date) + 1, garden, covered).ffMed : fall;
-        if (est && (est.late || est.from > f) && current) add("warn", "Saison un peu courte", `Première récolte estimée après les premiers gels (${fmt(f)}).`);
-        else if (est && current) add("ok", "Temps de culture suffisant", `Première récolte estimée vers le ${fmt(est.from)}.`);
-      } else {
+        if (est && (est.late || est.from > f) && current) add("warn", "Saison un peu courte", `Première ${event} estimée après les premiers gels (${fmt(f)}).`);
+        else if (est && current) add("ok", "Temps de culture suffisant", `Première ${event} estimée vers le ${fmt(est.from)}.`);
+      } else if (plant.rdt > 0 || isFlower) {
         const est = harvestEstimate({ plant: plantKey, method, date }, weather, clim);
-        if (est) add("info", "Récolte estimée", `Vers le ${fmt(est.from)}.`);
+        if (est) add("info", `${isFlower ? "Floraison" : "Récolte"} estimée`, `Vers le ${fmt(est.from)}.`);
       }
 
       if (plant.vivace && clim.extreme != null && !covered) {
@@ -668,7 +697,7 @@
   const api = {
     addDays, diffDays, yearOf, doy, clamp, mean, fmt,
     SOILS, HUMUS, DRAIN, IRRIG, SUN, WIND, SITU, METHODS,
-    soilReserve, textureFromFractions, climateFromArchive, hardinessZone, frostDates, seasonLength,
+    soilReserve, textureFromFractions, soilProbeRings, soilMapURL, soilMapMean, climateFromArchive, hardinessZone, frostDates, seasonLength,
     windowsFor, inWindow, nextWindow, yearCalendar,
     dailyFromForecast, dailyFromArchive, missingHistory, mergeWeather, weatherLabel,
     areaOf, isIndoors, isCovered, plantOf, stageOf, waterBalance, harvestEstimate,
